@@ -3,6 +3,13 @@ import cv2
 import numpy as np
 from picamera2 import Picamera2
 import time
+import pymongo
+from pymongo import MongoClient
+
+cluster = MongoClient("")
+
+db = cluster["Sleep_Data"]
+collection = db["UserData"]
 
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic = mp.solutions.holistic
@@ -23,8 +30,11 @@ height = 1.5
 camColour = (0,0,255)
 weight=3
 rightCount = 0
+# collection.insert_one({"_id":0, "sleep_direction":"Right", "time_spent":0})
 leftCount = 0
+# collection.insert_one({"_id":1, "sleep_direction":"Left", "time_spent":0})
 straightCount = 0
+# collection.insert_one({"_id":2, "sleep_direction":"Straight", "time_spent":0})
 
 with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
 	drawing_spec = mp_drawing.DrawingSpec(color=(128,0,128),thickness=2,circle_radius=1)
@@ -72,17 +82,20 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
 			if y < - 10:
 				text="Looking Right"
 				rightCount+=1
+				collection.update_one({"_id": 0}, {"$set": {"sleep_direction": "Right"}, "$inc": {"time_spent": 1}})
 				time.sleep(1)
 				
 				print("Time Spent on Right: " + str(rightCount))
 			elif y > 10:
 				text="Looking Left"
+				collection.update_one({"_id": 1}, {"$set": {"sleep_direction": "Left"}, "$inc": {"time_spent": 1}})
 			#elif x < -10:
 				#text="Looking Down"
 			#elif x > 10:
 				#text="Looking up"
 			else:
 				text="Forward"
+				collection.update_one({"_id": 2}, {"$set": {"sleep_direction": "Straight"}, "$inc": {"time_spent": 1}})
 			
 			nose_3d_projection,jacobian = cv2.projectPoints(nose_3d,rotation_vec,translation_vec,cam_matrix,distortion_matrix)
 			
@@ -109,8 +122,8 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
 			#cv2.putText(frame, str(int(fps))+ ' FPS', pos, font, height, camColour, weight)
 				
 		#mp_drawing.draw_landmarks(image, results.face_landmarks, mp_holistic.FACEMESH_CONTOURS, drawing_spec)		
-		#cv2.imshow("piCam", frame) # Uncomment to see clear camera             
-		cv2.imshow("piCam", image) #Uncomment to see Landmarks on camera
+		cv2.imshow("piCam", frame) # Uncomment to see clear camera             
+		#cv2.imshow("piCam", image) #Uncomment to see Landmarks on camera
 				
 		if cv2.waitKey(1)==ord('q'):
 			break
